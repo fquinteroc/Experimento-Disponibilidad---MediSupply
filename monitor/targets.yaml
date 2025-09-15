@@ -1,0 +1,6 @@
+targets:
+  - name: local-svc
+    url: http://svc:8080/health
+    deep_url: http://svc:8080/ready
+    threshold_ms: 500
+    headers: {}

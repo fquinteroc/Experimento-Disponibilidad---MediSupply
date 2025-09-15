@@ -1,0 +1,6 @@
+targets:
+  - name: medisupply-aws
+    url: http://availability-lab-alb-1400052646.us-east-1.elb.amazonaws.com/health
+    deep_url: http://availability-lab-alb-1400052646.us-east-1.elb.amazonaws.com/ready
+    threshold_ms: 500
+    headers: {}

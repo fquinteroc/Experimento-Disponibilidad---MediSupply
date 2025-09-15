@@ -1,0 +1,51 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16
+    container_name: lab_db
+    environment:
+      POSTGRES_PASSWORD: ${PG_SUPER_PASS:-postgres}
+    ports:
+      - "5435:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres && PGPASSWORD=$$POSTGRES_PASSWORD psql -U postgres -tAc \"SELECT 1 FROM pg_database WHERE datname='app'\" | grep -q 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  svc:
+    build: ./service
+    container_name: lab_service
+    environment:
+      DB_DSN: postgresql://app:app@db:5432/app
+      PORT: "8080"
+      EXTRA_LATENCY_MS: "600"
+      ERROR_RATE: "0.0"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  monitor:
+    build: ./monitor
+    container_name: lab_monitor
+    environment:
+      TARGETS_FILE: /app/targets.yaml
+      TIMEOUT_SEC: "2"
+      SLACK_WEBHOOK_URL: "${SLACK_WEBHOOK_URL:-}"
+      STATE_FILE: /state/state.json
+    volumes:
+      - ./monitor/targets.yaml:/app/targets.yaml:ro
+      - monitor_state:/state
+    depends_on:
+      - svc
+    command: ["python", "monitor_local.py", "--loop", "--interval", "5"]
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  monitor_state:
